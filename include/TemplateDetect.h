@@ -26,13 +26,13 @@ using TemplateDict = std::unordered_map<std::string, std::vector<TemplateAndMask
 
 
 //添加单张模板，如果templateName为空，默认使用文件名作为模板名
-void addTemplate(const char* imgPath,const char* templateName=nullptr);
+extern "C" __declspec(dllexport) void addTemplate(const char* imgPath,const char* templateName=nullptr);
 
 //添加目录下的所有图片作为一个模板，如果templateName为空，默认使用目录名作为模板名
-void addTemplateByDir(const char* dirPath,const char* templateName=nullptr);
+extern "C" __declspec(dllexport) void addTemplateByDir(const char* dirPath,const char* templateName=nullptr);
 
 //列出所有模板
-void listTemplates();
+extern "C" __declspec(dllexport) void listTemplates();
 
 //在img中匹配templateName对应的模板，返回匹配结果
 //当匹配度大于threshold时 立马返回匹配结果 否则就遍历模板列表 返回匹配度最高的结果

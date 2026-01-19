@@ -1,6 +1,5 @@
 ﻿cmake_minimum_required (VERSION 3.8)
 project ("SnapDetect") #工程名
-SET(CMAKE_BUILD_TYPE "Debug") #Debug或Release模式
 
 #C++版本的标准
 set(CMAKE_CXX_STANDARD 17)
@@ -34,6 +33,6 @@ file(GLOB SRC_FILES "source/*.cpp")
 add_executable(${PROJECT_NAME} main.cpp ${SRC_FILES})
 target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
 
-#生成静态库
-add_library(${PROJECT_NAME}Lib STATIC ${SRC_FILES})
+#生成动态库
+add_library(${PROJECT_NAME}Lib SHARED ${SRC_FILES})
 target_link_libraries(${PROJECT_NAME}Lib ${OpenCV_LIBS})

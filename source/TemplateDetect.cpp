@@ -86,7 +86,11 @@ void addTemplate(const char* imgPath,const char* templateName){
     maskMat = maskMat*255;
     TemplateAndMask templateAndMask{templateMat, maskMat};
     templateDict[templateNameStr].push_back(templateAndMask);
-    printf("SnapDetect添加模板: %s, 路径: %s\n", templateNameStr.c_str(), imgPath);
+    if(!maskMat.empty()){
+        printf("SnapDetect添加模板: %s, 路径: %s, 掩膜: %s\n", templateNameStr.c_str(), imgPath, "有");
+    }else{
+        printf("SnapDetect添加模板: %s, 路径: %s, 掩膜: %s\n", templateNameStr.c_str(), imgPath, "无");
+    }
 }
 
 void addTemplateByDir(const char* dirPath,const char* templateName){
