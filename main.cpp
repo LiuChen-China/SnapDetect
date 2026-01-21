@@ -41,18 +41,23 @@ void main()
 
 
     // ///////////////////////////测试窗口模板匹配
-    const char* templateDir = "G:/Desktop/SnapDetect/鼠标";
-    const char* imgPath = "G:/Desktop/SnapDetect/测试.png";
+    const char* templateDir = "G:/desktop/SnapDetect/鼠标";
     addTemplateByDir(templateDir);
     MatchResult matchResult = matchInWindow("鼠标","测试");
+    clock_t start = clock();
+    for (int i = 0; i < 10; i++)
+    {
+        matchResult = matchInWindow("鼠标","测试");
+    }
+    clock_t end = clock();
+    printf("match 10 times cost: %dms\n", (int)(end - start) / CLOCKS_PER_SEC * 1000/10);
     printf("matchResult.score: %f\n", matchResult.score);
     printf("matchResult.rect: %d, %d, %d, %d\n", matchResult.xmin, matchResult.ymin, matchResult.xmax, matchResult.ymax);
 
     // //////////////////////////测试固定区域模板匹配
-    // const char* templateDir = "E:/desktop/SnapDetect/鼠标";
-    // const char* imgPath = "E:/desktop/SnapDetect/测试.png";
+    // const char* templateDir = "G:/desktop/SnapDetect/鼠标";
     // addTemplateByDir(templateDir);
-    // WindowRect areaRect = {522, 250, 640, 540};
+    // WindowRect areaRect = {189, 189, 1424, 751};
     // //匹配10次 计算时间
     // clock_t start = clock();
     // MatchResult matchResult;

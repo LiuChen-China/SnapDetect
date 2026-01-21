@@ -9,6 +9,9 @@
 #include <dxgi1_2.h>      // DXGI 1.2接口(用于桌面复制)
 #include <stdio.h>        // 标准输入输出
 #include <opencv2/opencv.hpp> // OpenCV计算机视觉库
+#include <chrono>         // 新增：时间相关（用于延迟）
+#include <thread>         // 新增：线程休眠
+#include <unordered_map>  // 新增：窗口句柄缓存
 
 // 链接必要的库文件
 #pragma comment(lib, "d3d11.lib")   // Direct3D 11库
@@ -81,17 +84,20 @@ private:
 
     // 释放所有分配的资源
     void releaseResources();
-
+    
     // DXGI相关资源
     ID3D11Device* m_pDevice;              // Direct3D 11设备
     ID3D11DeviceContext* m_pDeviceContext; // Direct3D 11设备上下文
     IDXGIOutputDuplication* m_pOutputDuplication; // 桌面复制接口
     ID3D11Texture2D* m_pDesktopTexture;    // 桌面纹理
     ID3D11Texture2D* m_pStagingTexture;    // 暂存纹理(用于CPU访问)
+    ID3D11Texture2D* m_pAreaStagingTexture; // 新增：区域截图专用暂存纹理
 
     // 桌面尺寸
     int m_desktopWidth;    // 桌面宽度(考虑缩放因子)
     int m_desktopHeight;   // 桌面高度(考虑缩放因子)
+    int m_lastAreaWidth;   // 新增：记录上次区域截图的宽度
+    int m_lastAreaHeight;  // 新增：记录上次区域截图的高度
 
     // 窗口列表，存储所有可见窗口的句柄和标题
     std::vector<WindowData> m_windowDatas;
@@ -108,10 +114,6 @@ private:
     double m_zoomFactor;
 };
 
-
-
-
+// 外部调用函数声明（保持不变）
 MatInfo getWindowMatInfo(const char* titleSection="screen");
-MatInfo getDesktopAreaMatInfo(const WindowRect& rect);
-
-
+cv::Mat getDesktopAreaMat(const WindowRect& rect);

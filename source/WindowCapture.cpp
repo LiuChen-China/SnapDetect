@@ -67,6 +67,8 @@ bool ScreenCapturer::initialize() {
 
         if (SUCCEEDED(hr))          // 如果创建成功则跳出循环
             break;
+    //初始调用一次
+    getDesktopMat();
     }
 
     // 检查设备创建是否成功
@@ -244,7 +246,7 @@ cv::Mat ScreenCapturer::getDesktopMat() {
     IDXGIResource* pDesktopResource = nullptr; // 桌面资源
 
     // 获取下一帧(超时时间（毫秒），0 表示立即返回，INFINITE 表示无限等待。)
-    HRESULT hr = m_pOutputDuplication->AcquireNextFrame(100, &frameInfo, &pDesktopResource);
+    HRESULT hr = m_pOutputDuplication->AcquireNextFrame(0, &frameInfo, &pDesktopResource);
 
     // 处理获取帧的结果
     if (FAILED(hr)) {
@@ -372,120 +374,10 @@ cv::Mat ScreenCapturer::getWindowMat(const std::string& titleSection) {
     return m_windowMat;
 }
 
-
 cv::Mat ScreenCapturer::getDesktopAreaMat(const WindowRect& rect) {
-    // 如果桌面复制接口未初始化，则初始化
-    if (!m_pOutputDuplication) {
-        if (!initialize()) {
-            return cv::Mat(); // 初始化失败返回空Mat
-        }
-    }
-    
-    DXGI_OUTDUPL_FRAME_INFO frameInfo; // 帧信息结构
-    IDXGIResource* pDesktopResource = nullptr; // 桌面资源
-
-    // 获取下一帧(超时时间（毫秒），0 表示立即返回，INFINITE 表示无限等待。)
-    HRESULT hr = m_pOutputDuplication->AcquireNextFrame(100, &frameInfo, &pDesktopResource);
-
-    // 处理获取帧的结果
-    if (FAILED(hr)) {
-        if (hr == DXGI_ERROR_WAIT_TIMEOUT) {
-            // 超时则返回空Mat（或从缓存中裁剪）
-            return m_desktopMat.empty() ? cv::Mat() : m_desktopMat(cv::Rect(rect.x, rect.y, rect.width, rect.height)).clone();
-        }
-        else if (hr == DXGI_ERROR_ACCESS_LOST) {
-            // 访问丢失(如显示器分辨率改变)，重新初始化
-            releaseResources();
-            if (!initialize()) {
-                return cv::Mat();
-            }
-            return getDesktopAreaMat(rect); // 递归调用
-        }
-        else {
-            // 其他错误
-            std::cerr << "Failed to acquire next frame. HRESULT: 0x" << std::hex << hr << std::endl;
-            return cv::Mat();
-        }
-    }
-
-    // 从资源获取桌面纹理接口
-    hr = pDesktopResource->QueryInterface(__uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&m_pDesktopTexture));
-    pDesktopResource->Release(); // 释放资源接口
-    if (FAILED(hr)) {
-        std::cerr << "Failed to get desktop texture. HRESULT: 0x" << std::hex << hr << std::endl;
-        m_pOutputDuplication->ReleaseFrame();
-        return cv::Mat();
-    }
-
-    // 获取纹理描述
-    D3D11_TEXTURE2D_DESC desc;
-    m_pDesktopTexture->GetDesc(&desc);
-
-    // 验证矩形区域是否在桌面范围内
-    if (rect.x < 0 || rect.y < 0 || rect.width <= 0 || rect.height <= 0 ||
-        rect.x + rect.width > static_cast<int>(desc.Width) ||
-        rect.y + rect.height > static_cast<int>(desc.Height)) {
-        std::cerr << "Invalid desktop area rect." << std::endl;
-        m_pDesktopTexture->Release();
-        m_pOutputDuplication->ReleaseFrame();
-        return cv::Mat();
-    }
-
-    // 创建一个与指定区域大小相同的暂存纹理
-    D3D11_TEXTURE2D_DESC stagingDesc;
-    ZeroMemory(&stagingDesc, sizeof(stagingDesc));
-    stagingDesc.Width = rect.width;
-    stagingDesc.Height = rect.height;
-    stagingDesc.MipLevels = 1;
-    stagingDesc.ArraySize = 1;
-    stagingDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM; // BGRA格式
-    stagingDesc.SampleDesc.Count = 1;
-    stagingDesc.SampleDesc.Quality = 0;
-    stagingDesc.Usage = D3D11_USAGE_STAGING;       // CPU可读
-    stagingDesc.BindFlags = 0;                     // 不绑定到管线
-    stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ; // CPU读权限
-    stagingDesc.MiscFlags = 0;
-
-    ID3D11Texture2D* pStagingTexture = nullptr;
-    hr = m_pDevice->CreateTexture2D(&stagingDesc, nullptr, &pStagingTexture);
-    if (FAILED(hr)) {
-        std::cerr << "Failed to create staging texture. HRESULT: 0x" << std::hex << hr << std::endl;
-        m_pDesktopTexture->Release();
-        m_pOutputDuplication->ReleaseFrame();
-        return cv::Mat();
-    }
-
-    // 只复制指定区域的纹理数据
-    m_pDeviceContext->CopySubresourceRegion(
-        pStagingTexture,   // 目标纹理
-        0,                 // 目标子资源索引
-        0, 0, 0,           // 目标左上角坐标
-        m_pDesktopTexture, // 源纹理
-        0,                 // 源子资源索引
-        &CD3D11_BOX(rect.x, rect.y, 0, rect.x + rect.width, rect.y + rect.height, 1) // 源区域
-    );
-
-    m_pDesktopTexture->Release();
-
-    // 映射暂存纹理到内存，以便CPU读取
-    D3D11_MAPPED_SUBRESOURCE mappedResource;
-    hr = m_pDeviceContext->Map(pStagingTexture, 0, D3D11_MAP_READ, 0, &mappedResource);
-    if (FAILED(hr)) {
-        std::cerr << "Failed to map staging texture. HRESULT: 0x" << std::hex << hr << std::endl;
-        pStagingTexture->Release();
-        m_pOutputDuplication->ReleaseFrame();
-        return cv::Mat();
-    }
-
-    // 使用映射的数据创建OpenCV矩阵(BGRA格式)
-    cv::Mat frame(rect.height, rect.width, CV_8UC4, mappedResource.pData, mappedResource.RowPitch);
-    // 转换为BGR格式(去掉alpha通道)
-    cv::cvtColor(frame, m_areaMat, cv::COLOR_BGRA2BGR);
-    // 解除纹理映射并释放资源
-    m_pDeviceContext->Unmap(pStagingTexture, 0);
-    pStagingTexture->Release();
-    m_pOutputDuplication->ReleaseFrame();
-    
+    // 从桌面截图中提取区域
+    getDesktopMat();
+    m_areaMat = m_desktopMat(cv::Rect(rect.x, rect.y, rect.width, rect.height)).clone();
     return m_areaMat;
 }
 
@@ -571,15 +463,9 @@ MatInfo getWindowMatInfo(const char* titleSection) {
     return matInfo;
 }
 
-MatInfo getDesktopAreaMatInfo(const WindowRect& rect) {
+cv::Mat getDesktopAreaMat(const WindowRect& rect) {
     // 获取截屏器实例并执行截图
     ScreenCapturer& capturer = getCapturer();
     cv::Mat areaMat = capturer.getDesktopAreaMat(rect);
-    MatInfo info = {};
-    info.windowX = rect.x;
-    info.windowY = rect.y;
-    info.windowWidth = areaMat.cols;
-    info.windowHeight = areaMat.rows;
-    info.pMatUchar = static_cast<uchar*>(areaMat.data);
-    return info;
+    return areaMat;
 }

@@ -5,8 +5,7 @@
 MatchResult matchInDeskArea(const char* templateName,WindowRect areaRect)
 {
     //获取桌面区域矩阵
-    MatInfo areaMatInfo = getDesktopAreaMatInfo(areaRect);
-    cv::Mat areaMat(areaMatInfo.windowHeight, areaMatInfo.windowWidth, CV_8UC3, areaMatInfo.pMatUchar);
+    cv::Mat areaMat = getDesktopAreaMat(areaRect);
     //在区域内匹配模板
     MatchResult matchResult = matchTemplate(areaMat,templateName);
     return matchResult;
