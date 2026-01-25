@@ -21,15 +21,12 @@ struct MatchResult
 };
 
 //模板名:模板矩阵列表的字典别名 也可以用typedef代替using
-using TemplateDict = std::unordered_map<std::string, std::vector<TemplateAndMask>>;
+using TemplateDict = std::unordered_map<std::string, TemplateAndMask>;
 
 
 
 //添加单张模板，如果templateName为空，默认使用文件名作为模板名
 extern "C" __declspec(dllexport) void addTemplate(const char* imgPath,const char* templateName=nullptr);
-
-//添加目录下的所有图片作为一个模板，如果templateName为空，默认使用目录名作为模板名
-extern "C" __declspec(dllexport) void addTemplateByDir(const char* dirPath,const char* templateName=nullptr);
 
 //列出所有模板
 extern "C" __declspec(dllexport) void listTemplates();
