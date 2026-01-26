@@ -1,4 +1,4 @@
-﻿cmake_minimum_required (VERSION 3.10) 
+cmake_minimum_required (VERSION 3.10) 
 project ("SnapDetect") #工程名
 
 #C++版本的标准
@@ -16,7 +16,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/build/Release/li
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}/build/Debug/lib")
 
 # 自定义编译的OpenCV根目录
-set(MY_OPENCV_DIR "F:/opencv-4.8.0")
+set(MY_OPENCV_DIR "D:/opencv-4.8.0")
 set(OpenCV_DIR "${MY_OPENCV_DIR}/build")
 find_package(OpenCV REQUIRED 
     COMPONENTS core imgcodecs imgproc highgui videoio
